@@ -3,37 +3,54 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Foundation\Auth\AuthenticatesUsers;
+use App\User;
+use Illuminate\Support\Facades\Auth;
+use Socialite;
 
-class LoginController extends Controller
-{
-	/*
-    |--------------------------------------------------------------------------
-    | Login Controller
-    |--------------------------------------------------------------------------
-    |
-    | This controller handles authenticating users for the application and
-    | redirecting them to your home screen. The controller uses a trait
-    | to conveniently provide its functionality to your applications.
-    |
-    */
+class LoginController extends Controller {
 
-	use AuthenticatesUsers;
+    public function redirectToProvider() {
+        return Socialite::driver( 'google' )
+                        ->with( [ 'hd' => 'tri.be' ] )
+                        ->redirect();
+    }
 
-	/**
-	 * Where to redirect users after login.
-	 *
-	 * @var string
-	 */
-	protected $redirectTo = '/home';
+    public function handleProviderCallback() {
+        /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
+        $driver = Socialite::driver( 'google' );
+        /** @var \Laravel\Socialite\Two\User $someone */
+        $user          = $driver->user();
+        $now           = date( 'Y-m-d H:i:s' );
+        $updatePayload = [
+            'name'           => $user->getName(),
+            'remember_token' => $user->token,
+            'updated_at'     => $now,
+        ];
 
-	/**
-	 * Create a new controller instance.
-	 *
-	 * @return void
-	 */
-	public function __construct()
-	{
-		$this->middleware('guest')->except('logout');
-	}
+        $dbUser = User::query()->where( 'email', $user->getEmail() )->first();
+
+        if ( $dbUser instanceof User ) {
+            $dbUser->update( $updatePayload );
+        } else {
+            User::query()->insert(
+                array_merge( $updatePayload, [
+                    'email'      => $user->getEmail(),
+                    'name'       => $user->getName(),
+                    'password'   => '',
+                    'created_at' => $now,
+                ] ) );
+
+            $dbUser = User::query()->where( 'email', $user->getEmail() )->first();
+        }
+
+        Auth::login( $dbUser, true );
+
+        return redirect( '/' );
+    }
+
+    public function logout() {
+        Auth::logout();
+
+        return redirect( '/' );
+    }
 }
