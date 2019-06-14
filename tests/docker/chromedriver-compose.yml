@@ -1,0 +1,7 @@
+version: '2'
+
+services:
+  chromedriver:
+    image: selenium/standalone-chrome:3.141.59-oxygen
+    ports:
+      - "4444:4444"

@@ -6,4 +6,5 @@ composer.phar
 # composer.lock
 .idea
 .env
+.env.testing
 tags
