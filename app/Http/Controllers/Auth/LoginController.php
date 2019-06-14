@@ -27,6 +27,7 @@ class LoginController extends Controller {
             'updated_at'     => $now,
         ];
 
+        // use firstOrCreate here!
         $dbUser = User::query()->where( 'email', $user->getEmail() )->first();
 
         if ( $dbUser instanceof User ) {
